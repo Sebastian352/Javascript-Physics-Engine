@@ -1,6 +1,8 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
+const buton = document.getElementById('buton');
+
 const BALLZ = [];
 
 let LEFT, UP, RIGHT, DOWN;
@@ -28,6 +30,16 @@ class Vector{
     mult(n){
         return new Vector(this.x*n, this.y*n);
     }
+    unit(){
+        if(this.mag() === 0)
+            return new Vector(0,0);
+        else
+            return new Vector(this.x/this.mag(),this.y/this.mag());
+    }
+
+    normal(){
+        return new Vector(-this.y, this.x);
+    }
 
     drawVec(start_x, start_y, n, color){
         ctx.beginPath();
@@ -36,6 +48,10 @@ class Vector{
         ctx.strokeStyle = color;
         ctx.stroke();
         ctx.closePath();
+    }
+
+    static dot(v1, v2){
+        return v1.x*v2.x + v1.y*v2.y;
     }
 }
 
@@ -66,6 +82,12 @@ class Ball{
     }
 }
 
+
+if(buton){
+buton.addEventListener("click", function() {
+    let b = new Ball(400,Math.random()*100+200,20);
+});
+}
 function keyControl(b){
     canvas.addEventListener('keydown', function(e){
         if(e.key === 'a'){
@@ -115,7 +137,7 @@ function keyControl(b){
     if(!UP && !DOWN){
         b.acc.y = 0;
     }
-    
+    b.acc = b.acc.unit().mult(b.acceleration);
     //acceleration vector gets added to the velocity vector
     b.vel = b.vel.add(b.acc);
     b.vel = b.vel.mult(1-friction);
@@ -136,20 +158,27 @@ function coll_det_bb(b1,b2){
     }
 }
 
+function pen_res_bb(b1,b2){
+    let dist = b1.pos.subtr(b2.pos);
+    let pen_depth = b1.r + b2.r - dist.mag();
+    let pen_res = dist.unit().mult(pen_depth/2);
+    b1.pos = b1.pos.add(pen_res);
+    b2.pos = b2.pos.add(pen_res.mult(-1));
+}
+console.log(buton);
 function mainLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-    BALLZ.forEach((b) => {
+    BALLZ.forEach((b,index) => {
         b.drawBall();
         if (b.player){
             keyControl(b);
         }
+        for(let i = index + 1; i < BALLZ.length; i++)
+            if(coll_det_bb(BALLZ[index],BALLZ[i])){
+                pen_res_bb(BALLZ[index],BALLZ[i]);
+        }
         b.display();
     })
-
-    if(coll_det_bb(Ball1,Ball2)){
-        ctx.fillText("Collision",500,300);
-    }
-
     requestAnimationFrame(mainLoop);
 }
 
